@@ -1,5 +1,5 @@
 #include <iostream>
-#include "papi.h"
+#include <papi.h>
 #include <xmmintrin.h>
 #include <emmintrin.h>
 using namespace std;
@@ -54,7 +54,11 @@ float ** mm(float ** mat1, int rows1, int columns1, float ** mat2, int rows2, in
 		printf("CANNOT DO MATRIX MULTIPLICATION\n");
 		return NULL;
 	}
-	//double ** resMat = getMat(rows1, columns2);
+	int evt[1] = {PAPI_L1_TCM};
+	long long vals[1];
+
+	PAPI_start_counters(evt, 1);
+
 	int i, j, k;
 	for (i = 0; i < rows1; i++) {
 		for (k = 0; k < columns1/*or rows2*/; k++) {
@@ -63,6 +67,8 @@ float ** mm(float ** mat1, int rows1, int columns1, float ** mat2, int rows2, in
 			}
 		}
 	}
+	PAPI_stop_counters(vals, 1);
+	printf("L1 cache misses: %.16lld\n", vals[0]);
 	return resMat;
 }
 
@@ -81,13 +87,8 @@ float ** blockmm(float ** mat1, int rows1, int columns1, float ** mat2, int rows
 	//l1 cache is 32kb, 32 * 1024, 90~ ^ 2
 	for (int i = 0; i < NB; i += NU) {
 		for (int k = 0; k < NB; k++) {
-			//load C[i..i+MU-1, j..j+NU-1] into registers
 			for (int j = 0; j < NB; j += MU) {
-				//micro-kernel
-				//  load A[i..i+MU-1,k] into registers
-				// load B[k,j..j+NU-1] into registers
-				// multiply A's and B's and add to C's
-				// store C[i..i+MU-1, j..j+NU-1]
+
 				for (int n = 0; n < NU; n++) {
 					for (int m = 0; m < MU; m++) {
 						resMat[i + n][j + m] += mat1[i + n][k] * mat2[k][j + m];
@@ -110,8 +111,12 @@ float ** vmm(float ** mat1, int rows1, int columns1, float ** mat2, int rows2, i
 		cout << "not divisible by 4" << endl;
 		return nullptr;
 	}
-	//double ** resMat = getMat(rows1, columns2);
+
 	int NB = rows1 / 4;
+	int evt[1] = {PAPI_L1_TCM};
+	long long vals[1];
+
+	PAPI_start_counters(evt, 1);
 	__m128 rA, rB, rC;
 	for (int i = 0; i < rows1; i++) {
 		for (int k = 0; k < NB; k++) {
@@ -125,12 +130,16 @@ float ** vmm(float ** mat1, int rows1, int columns1, float ** mat2, int rows2, i
 			//printMatrix(resMat, rows1, rows1);
 		}
 	}
+	PAPI_stop_counters(vals, 1);
+	printf("L1 cache misses: %.16lld\n", vals[0]);
+
 	return resMat;
 }
 
 int main() {
+	PAPI_library_init(PAPI_VER_CURRENT);
 
-	const int matSize = 8;
+	const int matSize = 20;
 	float ** mat1 = allocate2DArrayOfFloat(matSize, matSize);
 	float ** mat2 = allocate2DArrayOfFloat(matSize, matSize);
 	float ** resMat = allocate2DArrayOfFloat(matSize, matSize);
