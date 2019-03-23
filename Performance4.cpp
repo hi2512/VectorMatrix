@@ -2,6 +2,9 @@
 #include <papi.h>
 #include <xmmintrin.h>
 #include <emmintrin.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 using namespace std;
 
 void printMatrix(float ** mat, int rows, int columns) {
@@ -82,7 +85,7 @@ float ** blockmm(float ** mat1, int rows1, int columns1, float ** mat2, int rows
 
 	if (NB % NU) {
 		cout << "cleanup required" << endl;
-		return nullptr;
+		return NULL;
 	}
 	//l1 cache is 32kb, 32 * 1024, 90~ ^ 2
 	for (int i = 0; i < NB; i += NU) {
@@ -109,7 +112,7 @@ float ** vmm(float ** mat1, int rows1, int columns1, float ** mat2, int rows2, i
 	}
 	if (rows1 % 4) {
 		cout << "not divisible by 4" << endl;
-		return nullptr;
+		return NULL;
 	}
 
 	int NB = rows1 / 4;
